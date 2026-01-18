@@ -1,206 +1,924 @@
----
-title: Configure a development build in cloud
-sidebar_title: Configure development build
-description: Learn how to configure a development build for a project using EAS Build.
-hasVideoLink: true
----
+import React, { useState } from 'react';
+import {
+  StyleSheet,
+  Text,
+  View,
+  TextInput,
+  TouchableOpacity,
+  ScrollView,
+  Alert
+} from 'react-native';
 
-import { Collapsible } from '~/ui/components/Collapsible';
-import { ContentSpotlight } from '~/ui/components/ContentSpotlight';
-import { ProgressTracker } from '~/ui/components/ProgressTracker';
-import { Terminal } from '~/ui/components/Snippet';
-import { Step } from '~/ui/components/Step';
-import { CODE } from '~/ui/components/Text';
-import { VideoBoxLink } from '~/ui/components/VideoBoxLink';
+export default function App() {
+  // DEĞİŞKENLER
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [rememberMe, setRememberMe] = useState(true);
+  const [status, setStatus] = useState('🟢 Çevrimiçi');
+  const [currentScreen, setCurrentScreen] = useState('login');
+  const [messageText, setMessageText] = useState('');
+  const [selectedContact, setSelectedContact] = useState('Ahmet Yılmaz');
 
-In this chapter, we'll set up and configure a development build with EAS for our example app.
-
-<VideoBoxLink videoId="uQCE9zl3dXU" title="Watch: How to configure a development build" />
-
----
-
-## Understanding development builds
-
-Let's start by learning about what are development builds and why we need them.
-
-A [development build](/develop/development-builds/introduction/) is a debug version of our project. It is optimized for quick iterations when creating an app. It contains the [`expo-dev-client`](/versions/latest/sdk/dev-client/) library, which offers a robust and complete development environment. This setup allows us to integrate any native library or change code inside the [native directories](/workflow/overview/#android-and-ios-native-projects) as required.
-
-### Key highlights
-
-> **Note:** If you are familiar with [Expo Go](/get-started/expo-go/), think of a development build as a customizable version of Expo Go that is unique to the requirements of a project.
-
-| Feature                           | Development Builds                                                                                                                             | Expo Go                                                                                              |
-| --------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
-| **Development phase**             | Offers web-like iteration speed for mobile app development.                                                                                    | Allows for quick iteration and testing of Expo SDK projects using the client app.                    |
-| **Collaboration**                 | Facilitates team testing with shared native runtime.                                                                                           | Easy project sharing via QR codes on a device.                                                       |
-| **Third-party libraries support** | Full support for any [third-party library](/workflow/using-libraries/#third-party-libraries), including those that require custom native code. | Limited to libraries within the Expo SDK, not suitable for custom native dependencies.               |
-| **Customization**                 | Extensive customization with [config plugins](/config-plugins/introduction/) and direct access to native code.                                 | Limited customization with a focus on Expo SDK capabilities without direct native code modification. |
-| **Intended use**                  | Ideal for full-fledged app development aimed at store deployment, offering a complete development environment and tools.                       | Ideal for learning, prototyping, and experimenting. Not recommended for production apps.             |
-
-<Step label="1">
-
-## Install expo-dev-client library
-
-To initialize our project for a development build, let's [`cd`](https://developer.mozilla.org/en-US/docs/Learn/Tools_and_testing/Understanding_client-side_tools/Command_line#basic_built-in_terminal_commands) inside our project directory and run the following command to install the library:
-
-<Terminal cmd={['$ npx expo install expo-dev-client']} />
-
-### Start the development server
-
-Run the `npx expo start` to start the [development server](/get-started/start-developing/#start-a-development-server):
-
-<Terminal cmd={['$ npx expo start']} />
-
-This command starts the metro bundler. In the terminal window, we see the QR code followed by the `Metro waiting on...` and a manifest URL:
-
-<ContentSpotlight
-  alt="Running development server"
-  src="/static/images/tutorial/eas/development-server.png"
-  className="max-w-[600px]"
-/>
-
-Let's notice the changes installing the `expo-dev-client` library:
-
-- The manifest URL contains `expo-development-client` along with the app scheme
-- The development server now operates for a development build (instead of Expo Go).
-
-Since we do not have a development build installed on one of our devices or an emulator/simulator, we can't run our project yet.
-
-</Step>
-
-<Step label="2">
-
-## Initialize a development build
-
-### Install EAS CLI
-
-We need to install the EAS Command Line Interface (CLI) tool as a global dependency on our local machine. Run the following command:
-
-<Terminal cmd={['$ npm install -g eas-cli']} />
-
-### Log in or sign up for an Expo account
-
-> If you have an Expo account and are signed in using Expo CLI, skip this step. If you don't have an Expo account, [sign up here](https://expo.dev/signup) and proceed with the login command described below.
-
-To log in, run the following command:
-
-<Terminal cmd={['$ eas login']} />
-
-This command asks for our Expo account email or username and password to complete the login.
-
-### Initialize and link the project to EAS
-
-For any new project, the first step is to initialize and link it to the EAS servers. Run the following command:
-
-<Terminal cmd={['$ eas init']} />
-
-On running, this command:
-
-- Requests verification of the account owner by entering our Expo account credentials and asks if we want to create a new EAS project:
-
-<Terminal
-  cmd={[
-    '# Output after running eas init',
-    '✔ Which account should own this project? > your-username',
-    '✔ Would you like to create a project for @your-username/sticker-smash? … yes',
-    '✔ Created @your-username/sticker-smash',
-    '✔ Project successfully linked (ID: XXXX-XX-XX-XXXX) (modified app.json)',
-  ]}
-/>
-
-- Creates EAS project and provides a link to that project which we can open in the EAS dashboard:
-
-<ContentSpotlight
-  alt="New project in EAS dashboard"
-  src="/static/images/tutorial/eas/new-project.png"
-/>
-
-- Generates a unique `projectId` and links this EAS project to the example app on our development machine.
-- Modifies **app.json** to include [`extra.eas.projectId`](/versions/latest/sdk/constants/#easconfig) and updates its value with the unique ID created.
-
-<Collapsible summary={<>What is <CODE>projectId</CODE> in app.json?</>}>
-
-When `eas init` runs, it associates a unique identifier for our project in **app.json** under `extra.eas.projectId`. The value of this property is used to identify our project on EAS servers.
-
-```json
-{
-  "extra": {
-    "eas": {
-      "projectId": "0cd3da2d-xxx-xxx-xxx-xxxxxxxxxx"
+  // GİRİŞ YAP
+  const handleLogin = () => {
+    if (!email.trim()) {
+      Alert.alert('Hata', 'Lütfen e-posta adresinizi giriniz.');
+      return;
     }
+    
+    Alert.alert(
+      'Hoş Geldiniz!',
+      `MSN Messenger'a hoş geldiniz ${email.split('@')[0]}!`,
+      [{ text: 'Tamam', onPress: () => setCurrentScreen('contacts') }]
+    );
+  };
+
+  // ÇIKIŞ YAP
+  const handleLogout = () => {
+    setEmail('');
+    setPassword('');
+    setCurrentScreen('login');
+    Alert.alert('Başarılı', 'Çıkış yapıldı.');
+  };
+
+  // DEMO KİŞİLER
+  const demoContacts = [
+    { id: 1, name: 'Ahmet Yılmaz', status: '🟢 Çevrimiçi', lastSeen: 'Şu anda' },
+    { id: 2, name: 'Ayşe Demir', status: '🌙 Uzakta', lastSeen: '10 dk önce' },
+    { id: 3, name: 'Mehmet Kaya', status: '🔴 Meşgul', lastSeen: 'Rahatsız etmeyin' },
+    { id: 4, name: 'Fatma Şahin', status: '⚫ Çevrimdışı', lastSeen: '2 saat önce' },
+  ];
+
+  // DEMO MESAJLAR
+  const demoMessages = [
+    { id: 1, sender: 'Ahmet', text: 'Merhaba! Nasılsın?', time: '14:30', isMe: false },
+    { id: 2, sender: 'Ben', text: 'İyiyim, teşekkürler! 😊', time: '14:31', isMe: true },
+    { id: 3, sender: 'Ahmet', text: 'MSN geri geldi diye çok sevindim!', time: '14:32', isMe: false },
+  ];
+
+  // DURUM SEÇENEKLERİ
+  const statusOptions = [
+    '🟢 Çevrimiçi',
+    '🌙 Uzakta', 
+    '🔴 Meşgul',
+    '📞 Telefondayım',
+    '⚫ Çevrimdışı'
+  ];
+
+  // ---------- GİRİŞ EKRANI ----------
+  if (currentScreen === 'login') {
+    return (
+      <ScrollView style={styles.container}>
+        {/* MSN BAŞLIK */}
+        <View style={styles.msnHeader}>
+          <Text style={styles.msnLogo}>MSN</Text>
+          <Text style={styles.messengerText}>Messenger</Text>
+          <Text style={styles.subtitle}>2000'lerin Ruhuyla</Text>
+        </View>
+
+        {/* GİRİŞ FORMU */}
+        <View style={styles.loginBox}>
+          <Text style={styles.loginTitle}>📨 Oturum Aç</Text>
+          
+          <TextInput
+            style={styles.input}
+            placeholder="ornek@hotmail.com"
+            placeholderTextColor="#888"
+            value={email}
+            onChangeText={setEmail}
+          />
+          
+          <TextInput
+            style={styles.input}
+            placeholder="Şifre"
+            placeholderTextColor="#888"
+            value={password}
+            onChangeText={setPassword}
+            secureTextEntry
+          />
+
+          {/* DURUM SEÇ */}
+          <Text style={styles.label}>Durumunuz:</Text>
+          <View style={styles.statusContainer}>
+            {statusOptions.map((option, index) => (
+              <TouchableOpacity
+                key={index}
+                style={[
+                  styles.statusButton,
+                  status === option && styles.statusButtonActive
+                ]}
+                onPress={() => setStatus(option)}
+              >
+                <Text style={[
+                  styles.statusButtonText,
+                  status === option && { color: 'white' }
+                ]}>
+                  {option}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          {/* BENİ HATIRLA */}
+          <TouchableOpacity
+            style={styles.checkboxContainer}
+            onPress={() => setRememberMe(!rememberMe)}
+          >
+            <View style={[styles.checkbox, rememberMe && styles.checkboxChecked]}>
+              {rememberMe && <Text style={styles.checkmark}>✓</Text>}
+            </View>
+            <Text style={styles.checkboxLabel}>Beni hatırla</Text>
+          </TouchableOpacity>
+
+          {/* GİRİŞ BUTONU */}
+          <TouchableOpacity style={styles.loginButton} onPress={handleLogin}>
+            <Text style={styles.loginButtonText}>OTURUM AÇ</Text>
+          </TouchableOpacity>
+
+          <Text style={styles.note}>
+            💡 Demo: Herhangi bir e-posta ile giriş yapabilirsiniz.
+          </Text>
+        </View>
+
+        {/* ÖZELLİKLER */}
+        <View style={styles.features}>
+          <Text style={styles.featuresTitle}>🎮 MSN Özellikleri:</Text>
+          <TouchableOpacity onPress={() => Alert.alert('Mesajlaşma', 'Anında mesajlaşma özelliği aktif!')}>
+            <Text style={styles.feature}>• Anında Mesajlaşma</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => Alert.alert('Emoticons', 'Emoticon galerisi yakında!')}>
+            <Text style={styles.feature}>• Emoticon Galerisi</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => Alert.alert('Dosya', 'Dosya transferi özelliği yakında!')}>
+            <Text style={styles.feature}>• Dosya Transferi</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => Alert.alert('Durum', 'Kişisel durumlarınızı değiştirebilirsiniz!')}>
+            <Text style={styles.feature}>• Kişisel Durumlar</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => Alert.alert('Nudge', 'Nudge özelliği aktif!')}>
+            <Text style={styles.feature}>• Nudge (Sarsma)</Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.footer}>
+          <Text style={styles.footerText}>© 2024 MSN Revival</Text>
+        </View>
+      </ScrollView>
+    );
   }
-}
-```
 
-</Collapsible>
+  // ---------- KİŞİLER EKRANI ----------
+  if (currentScreen === 'contacts') {
+    return (
+      <ScrollView style={styles.container}>
+        {/* ÜST MENÜ */}
+        <View style={styles.topBar}>
+          <Text style={styles.topTitle}>MSN Messenger</Text>
+          <View style={styles.topButtons}>
+            <TouchableOpacity 
+              style={styles.topButton}
+              onPress={() => {
+                const currentIndex = statusOptions.indexOf(status);
+                const nextIndex = (currentIndex + 1) % statusOptions.length;
+                setStatus(statusOptions[nextIndex]);
+              }}
+            >
+              <Text style={styles.topButtonText}>{status}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.topButton} onPress={handleLogout}>
+              <Text style={styles.topButtonText}>Çıkış</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
 
-</Step>
+        {/* ANA MENÜ */}
+        <View style={styles.mainMenu}>
+          <TouchableOpacity 
+            style={[styles.menuItem, currentScreen === 'contacts' && styles.activeMenuItem]}
+            onPress={() => setCurrentScreen('contacts')}
+          >
+            <Text style={styles.menuText}>👥 Kişiler</Text>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={[styles.menuItem, currentScreen === 'chat' && styles.activeMenuItem]}
+            onPress={() => {
+              setSelectedContact('Ahmet Yılmaz');
+              setCurrentScreen('chat');
+            }}
+          >
+            <Text style={styles.menuText}>💬 Sohbet</Text>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={styles.menuItem}
+            onPress={() => Alert.alert('Emoticons', 'Emoticon galerisi yakında! 😊')}
+          >
+            <Text style={styles.menuText}>😊 Emoticons</Text>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={styles.menuItem}
+            onPress={() => Alert.alert('Ayarlar', 'Ayarlar menüsü yakında! ⚙️')}
+          >
+            <Text style={styles.menuText}>⚙️ Ayarlar</Text>
+          </TouchableOpacity>
+        </View>
 
-<Step label="3">
+        {/* KİŞİ LİSTESİ */}
+        <View style={styles.contactsList}>
+          <Text style={styles.contactsTitle}>
+            Kişilerim ({demoContacts.filter(c => c.status.includes('🟢')).length} çevrimiçi)
+          </Text>
+          
+          {demoContacts.map(contact => (
+            <TouchableOpacity
+              key={contact.id}
+              style={styles.contactItem}
+              onPress={() => {
+                setSelectedContact(contact.name);
+                setCurrentScreen('chat');
+              }}
+            >
+              <View style={styles.contactInfo}>
+                <Text style={styles.contactStatus}>{contact.status}</Text>
+                <Text style={styles.contactName}>{contact.name}</Text>
+                <Text style={styles.contactLastSeen}>{contact.lastSeen}</Text>
+              </View>
+              <TouchableOpacity 
+                style={styles.messageIcon}
+                onPress={() => {
+                  setSelectedContact(contact.name);
+                  setCurrentScreen('chat');
+                }}
+              >
+                <Text>💬</Text>
+              </TouchableOpacity>
+            </TouchableOpacity>
+          ))}
+        </View>
 
-## Configure project for EAS Build
+        {/* HIZLI İŞLEMLER */}
+        <View style={styles.quickActions}>
+          <TouchableOpacity 
+            style={styles.actionButton}
+            onPress={() => Alert.alert('Kişi Ekle', 'Yeni kişi ekleme özelliği yakında!')}
+          >
+            <Text style={styles.actionIcon}>➕</Text>
+            <Text style={styles.actionText}>Kişi Ekle</Text>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={styles.actionButton}
+            onPress={() => Alert.alert('Müzik', 'Şu anda dinlediğiniz müziği paylaşın!')}
+          >
+            <Text style={styles.actionIcon}>🎵</Text>
+            <Text style={styles.actionText}>Müzik</Text>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={styles.actionButton}
+            onPress={() => Alert.alert('Webcam', 'Webcam görüşmesi başlat!')}
+          >
+            <Text style={styles.actionIcon}>📷</Text>
+            <Text style={styles.actionText}>Webcam</Text>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={styles.actionButton}
+            onPress={() => Alert.alert('Nudge', 'Tüm çevrimiçi kişileri salla!')}
+          >
+            <Text style={styles.actionIcon}>👾</Text>
+            <Text style={styles.actionText}>Nudge</Text>
+          </TouchableOpacity>
+        </View>
 
-To set up our project for EAS Build, run the following command:
-
-<Terminal cmd={['$ eas build:configure']} />
-
-On running, this command:
-
-- Prompts to select a platform: **Android**, **iOS**, or **All**. Since we are creating Android and iOS apps, let's select **All**.
-- Creates **eas.json** in the root of our project's directory with the following configuration:
-
-```json eas.json
-{
-  "cli": {
-    "version": ">= 16.18.0",
-    "appVersionSource": "remote"
-  },
-  "build": {
-    "development": {
-      "developmentClient": true,
-      "distribution": "internal"
-    },
-    "preview": {
-      "distribution": "internal"
-    },
-    "production": {
-      "autoIncrement": true
-    }
-  },
-  "submit": {
-    "production": {}
+        {/* EK BİLGİ */}
+        <View style={styles.infoBox}>
+          <Text style={styles.infoTitle}>MSN İstatistikleri:</Text>
+          <Text style={styles.infoText}>• 🟢 {demoContacts.filter(c => c.status.includes('🟢')).length} kişi çevrimiçi</Text>
+          <Text style={styles.infoText}>• 📱 {email || 'Misafir'} olarak giriş yaptınız</Text>
+          <Text style={styles.infoText}>• ⏰ Son giriş: Şu anda</Text>
+        </View>
+      </ScrollView>
+    );
   }
+
+  // ---------- SOHBET EKRANI ----------
+  if (currentScreen === 'chat') {
+    return (
+      <ScrollView style={styles.container}>
+        {/* SOHBET BAŞLIK */}
+        <View style={styles.chatHeader}>
+          <TouchableOpacity onPress={() => setCurrentScreen('contacts')}>
+            <Text style={styles.backButton}>← Geri</Text>
+          </TouchableOpacity>
+          <View>
+            <Text style={styles.chatUserName}>{selectedContact}</Text>
+            <Text style={styles.chatUserStatus}>
+              {demoContacts.find(c => c.name === selectedContact)?.status || '🟢 Çevrimiçi'}
+            </Text>
+          </View>
+          <TouchableOpacity onPress={handleLogout}>
+            <Text style={styles.closeButton}>✕</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* MESAJLAR */}
+        <View style={styles.messagesContainer}>
+          {demoMessages.map(msg => (
+            <View
+              key={msg.id}
+              style={[
+                styles.messageBubble,
+                msg.isMe ? styles.myMessage : styles.theirMessage
+              ]}
+            >
+              {!msg.isMe && (
+                <Text style={styles.messageSender}>{msg.sender}:</Text>
+              )}
+              <Text style={styles.messageText}>{msg.text}</Text>
+              <Text style={styles.messageTime}>{msg.time}</Text>
+            </View>
+          ))}
+        </View>
+
+        {/* MESAJ GÖNDER */}
+        <View style={styles.sendContainer}>
+          <TouchableOpacity 
+            style={styles.emojiMainButton}
+            onPress={() => Alert.alert('Emoticons', 'Emoticon seçici yakında!')}
+          >
+            <Text style={styles.emojiButtonText}>😊</Text>
+          </TouchableOpacity>
+          <TextInput
+            style={styles.messageInput}
+            placeholder="Mesajınızı yazın..."
+            value={messageText}
+            onChangeText={setMessageText}
+            placeholderTextColor="#999"
+          />
+          <TouchableOpacity
+            style={styles.sendButton}
+            onPress={() => {
+              if (messageText.trim()) {
+                Alert.alert('Başarılı', `${selectedContact}'a mesaj gönderildi: "${messageText}"`);
+                setMessageText('');
+              } else {
+                Alert.alert('Hata', 'Lütfen mesaj yazın!');
+              }
+            }}
+          >
+            <Text style={styles.sendButtonText}>📨</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* EMOJİLER */}
+        <View style={styles.emojisContainer}>
+          <Text style={styles.emojisTitle}>Hızlı Emoticons:</Text>
+          <View style={styles.emojisRow}>
+            {['😊', '😂', '😍', '😎', '🥳', '❤️', '🔥', '🎮'].map((emoji, i) => (
+              <TouchableOpacity
+                key={i}
+                style={styles.emojiSmallButton}
+                onPress={() => setMessageText(prev => prev + emoji)}
+              >
+                <Text style={styles.emojiText}>{emoji}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+
+        {/* EK ÖZELLİKLER */}
+        <View style={styles.chatFeatures}>
+          <TouchableOpacity 
+            style={styles.chatFeature}
+            onPress={() => Alert.alert('Dosya', 'Dosya gönderme özelliği yakında!')}
+          >
+            <Text style={styles.chatFeatureIcon}>📎</Text>
+            <Text style={styles.chatFeatureText}>Dosya</Text>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={styles.chatFeature}
+            onPress={() => Alert.alert('Resim', 'Resim gönderme özelliği yakında!')}
+          >
+            <Text style={styles.chatFeatureIcon}>📷</Text>
+            <Text style={styles.chatFeatureText}>Resim</Text>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={styles.chatFeature}
+            onPress={() => Alert.alert('Ses', 'Ses mesajı gönderme yakında!')}
+          >
+            <Text style={styles.chatFeatureIcon}>🎵</Text>
+            <Text style={styles.chatFeatureText}>Ses</Text>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={styles.chatFeature}
+            onPress={() => Alert.alert('Nudge!', `${selectedContact}'ı salladınız! 💥`)}
+          >
+            <Text style={styles.chatFeatureIcon}>👾</Text>
+            <Text style={styles.chatFeatureText}>Nudge</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* MSN HABERLERİ */}
+        <View style={styles.newsBox}>
+          <Text style={styles.newsTitle}>📰 MSN Haberleri:</Text>
+          <Text style={styles.newsItem}>• 🎉 MSN Revival başarıyla çalışıyor!</Text>
+          <Text style={styles.newsItem}>• 😊 Tüm butonlar aktif edildi</Text>
+          <Text style={styles.newsItem}>• 🚀 Firebase entegrasyonu yakında</Text>
+        </View>
+      </ScrollView>
+    );
+  }
+
+  return null;
 }
-```
 
-This is the default configuration for **eas.json** in a new project. It does two things:
-
-- Defines the current EAS CLI version.
-- Adds three [build profiles](/build/eas-json/#build-profiles): `development`, `preview`, and `production`.
-
-</Step>
-
-<Collapsible summary="Explore development profile further">
-
-**eas.json** is a collection of different build profiles. Each profile is tailored with distinct configurations to produce specific build types. These profiles can also include platform-specific settings for Android or iOS.
-
-Currently, our focus is on the `development` profile, which includes the following configuration:
-
-- [`developmentClient`](/eas/json/#developmentclient): Enabled (`true`) for creating a debug build. It loads the app using the `expo-dev-client` library, which provides development tools and generates a build artifact for device or emulator/simulator installation and allows using the app for local development as it supports updating the JavaScript on the fly.
-- [`distribution`](/eas/json/#distribution): Configured as `internal` to indicate that we want to share the build internally (instead of uploading it on app stores).
-
-> **Note**: Builds offer extensive customization options, including platform-specific settings and the ability to extend configurations across different build profiles. Learn more about [customizing build profiles](/build/eas-json/#build-profiles).
-
-</Collapsible>
-
-## Summary
-
-<ProgressTracker
-  currentChapterIndex={0}
-  name="EAS_TUTORIAL"
-  summary="
-We successfully used the EAS CLI to initialize, and configure our project, link it to EAS servers, and prepare a development build."
-  nextChapterDescription="In the next chapter, let's create a development build for Android, install it on a device and an emulator, and get it running with the development server."
-  nextChapterTitle="Create and run a cloud build for Android"
-  nextChapterLink="/tutorial/eas/android-development-build/"
-/>
+// ---------- STİLLER ----------
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#e3e9ff',
+  },
+  
+  // GİRİŞ EKRANI
+  msnHeader: {
+    backgroundColor: '#1ba1e2',
+    paddingTop: 50,
+    paddingBottom: 30,
+    alignItems: 'center',
+    borderBottomWidth: 5,
+    borderBottomColor: '#0d8cc9',
+  },
+  msnLogo: {
+    fontSize: 48,
+    fontWeight: 'bold',
+    color: '#ffcc00',
+    textShadowColor: '#000',
+    textShadowOffset: { width: 2, height: 2 },
+    textShadowRadius: 3,
+  },
+  messengerText: {
+    fontSize: 48,
+    fontWeight: 'bold',
+    color: 'white',
+    textShadowColor: '#000',
+    textShadowOffset: { width: 2, height: 2 },
+    textShadowRadius: 3,
+  },
+  subtitle: {
+    fontSize: 18,
+    color: '#ffcc00',
+    marginTop: 10,
+    fontStyle: 'italic',
+  },
+  loginBox: {
+    backgroundColor: 'white',
+    margin: 20,
+    padding: 25,
+    borderRadius: 15,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  loginTitle: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: '#1ba1e2',
+    marginBottom: 25,
+    textAlign: 'center',
+  },
+  input: {
+    borderWidth: 2,
+    borderColor: '#1ba1e2',
+    borderRadius: 10,
+    padding: 15,
+    fontSize: 16,
+    marginBottom: 15,
+    backgroundColor: '#f9fdff',
+  },
+  label: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#333',
+    marginVertical: 10,
+  },
+  statusContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginBottom: 20,
+  },
+  statusButton: {
+    backgroundColor: '#f0f7ff',
+    paddingHorizontal: 15,
+    paddingVertical: 10,
+    borderRadius: 20,
+    marginRight: 10,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: '#d0e0f0',
+  },
+  statusButtonActive: {
+    backgroundColor: '#1ba1e2',
+    borderColor: '#0d8cc9',
+  },
+  statusButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  checkboxContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 25,
+  },
+  checkbox: {
+    width: 24,
+    height: 24,
+    borderWidth: 2,
+    borderColor: '#1ba1e2',
+    marginRight: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 5,
+  },
+  checkboxChecked: {
+    backgroundColor: '#1ba1e2',
+  },
+  checkmark: {
+    color: 'white',
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  checkboxLabel: {
+    fontSize: 16,
+    color: '#333',
+  },
+  loginButton: {
+    backgroundColor: '#ffcc00',
+    paddingVertical: 18,
+    borderRadius: 10,
+    borderWidth: 3,
+    borderColor: '#e6b800',
+  },
+  loginButtonText: {
+    color: '#333',
+    fontSize: 20,
+    fontWeight: 'bold',
+    textAlign: 'center',
+  },
+  note: {
+    textAlign: 'center',
+    color: '#666',
+    marginTop: 20,
+    fontSize: 14,
+    fontStyle: 'italic',
+  },
+  features: {
+    backgroundColor: '#fff9e6',
+    margin: 20,
+    padding: 20,
+    borderRadius: 15,
+    borderWidth: 3,
+    borderColor: '#ffcc00',
+  },
+  featuresTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#ff8800',
+    marginBottom: 15,
+  },
+  feature: {
+    fontSize: 16,
+    color: '#333',
+    marginBottom: 10,
+    paddingLeft: 10,
+  },
+  footer: {
+    alignItems: 'center',
+    padding: 25,
+  },
+  footerText: {
+    fontSize: 14,
+    color: '#666',
+  },
+  
+  // KİŞİLER EKRANI
+  topBar: {
+    backgroundColor: '#1ba1e2',
+    paddingTop: 50,
+    paddingBottom: 20,
+    paddingHorizontal: 20,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    borderBottomWidth: 3,
+    borderBottomColor: '#0d8cc9',
+  },
+  topTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: 'white',
+  },
+  topButtons: {
+    flexDirection: 'row',
+  },
+  topButton: {
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    paddingHorizontal: 15,
+    paddingVertical: 8,
+    borderRadius: 15,
+    marginLeft: 10,
+  },
+  topButtonText: {
+    color: 'white',
+    fontWeight: 'bold',
+    fontSize: 14,
+  },
+  mainMenu: {
+    flexDirection: 'row',
+    backgroundColor: '#f0f0f0',
+    borderBottomWidth: 1,
+    borderBottomColor: '#ccc',
+  },
+  menuItem: {
+    flex: 1,
+    paddingVertical: 15,
+    alignItems: 'center',
+  },
+  activeMenuItem: {
+    backgroundColor: 'white',
+    borderBottomWidth: 3,
+    borderBottomColor: '#1ba1e2',
+  },
+  menuText: {
+    fontSize: 14,
+    color: '#333',
+    fontWeight: '600',
+  },
+  contactsList: {
+    backgroundColor: 'white',
+    margin: 20,
+    padding: 20,
+    borderRadius: 10,
+  },
+  contactsTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#1ba1e2',
+    marginBottom: 20,
+  },
+  contactItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+  },
+  contactInfo: {
+    flex: 1,
+  },
+  contactStatus: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    marginBottom: 5,
+  },
+  contactName: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 5,
+  },
+  contactLastSeen: {
+    fontSize: 14,
+    color: '#666',
+  },
+  messageIcon: {
+    backgroundColor: '#f0f7ff',
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  quickActions: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    marginHorizontal: 20,
+    marginBottom: 20,
+  },
+  actionButton: {
+    alignItems: 'center',
+  },
+  actionIcon: {
+    fontSize: 24,
+    marginBottom: 5,
+  },
+  actionText: {
+    fontSize: 12,
+    color: '#333',
+  },
+  infoBox: {
+    backgroundColor: '#f0f7ff',
+    marginHorizontal: 20,
+    marginBottom: 20,
+    padding: 20,
+    borderRadius: 10,
+    borderWidth: 2,
+    borderColor: '#1ba1e2',
+  },
+  infoTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#1ba1e2',
+    marginBottom: 10,
+  },
+  infoText: {
+    fontSize: 14,
+    color: '#333',
+    marginBottom: 8,
+  },
+  
+  // SOHBET EKRANI
+  chatHeader: {
+    backgroundColor: '#1ba1e2',
+    paddingTop: 50,
+    paddingBottom: 20,
+    paddingHorizontal: 20,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    borderBottomWidth: 3,
+    borderBottomColor: '#0d8cc9',
+  },
+  backButton: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  chatUserName: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: 'white',
+    textAlign: 'center',
+  },
+  chatUserStatus: {
+    fontSize: 14,
+    color: '#ffcc00',
+    textAlign: 'center',
+    marginTop: 5,
+  },
+  closeButton: {
+    color: 'white',
+    fontSize: 24,
+    fontWeight: 'bold',
+  },
+  messagesContainer: {
+    padding: 20,
+  },
+  messageBubble: {
+    maxWidth: '80%',
+    padding: 15,
+    borderRadius: 20,
+    marginBottom: 15,
+  },
+  messageSender: {
+    fontSize: 12,
+    color: '#666',
+    marginBottom: 5,
+    fontWeight: '600',
+  },
+  myMessage: {
+    backgroundColor: '#e8fff0',
+    alignSelf: 'flex-end',
+    borderTopRightRadius: 5,
+  },
+  theirMessage: {
+    backgroundColor: '#f0f7ff',
+    alignSelf: 'flex-start',
+    borderTopLeftRadius: 5,
+  },
+  messageText: {
+    fontSize: 16,
+    color: '#333',
+    marginBottom: 5,
+  },
+  messageTime: {
+    fontSize: 12,
+    color: '#666',
+    textAlign: 'right',
+  },
+  sendContainer: {
+    flexDirection: 'row',
+    paddingHorizontal: 20,
+    paddingBottom: 20,
+    alignItems: 'center',
+  },
+  emojiMainButton: {
+    backgroundColor: 'white',
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 10,
+    borderWidth: 2,
+    borderColor: '#1ba1e2',
+  },
+  emojiButtonText: {
+    fontSize: 24,
+  },
+  messageInput: {
+    flex: 1,
+    borderWidth: 2,
+    borderColor: '#1ba1e2',
+    borderRadius: 25,
+    paddingHorizontal: 20,
+    paddingVertical: 15,
+    fontSize: 16,
+    backgroundColor: 'white',
+    marginRight: 10,
+  },
+  sendButton: {
+    backgroundColor: '#ffcc00',
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  sendButtonText: {
+    fontSize: 20,
+  },
+  emojisContainer: {
+    paddingHorizontal: 20,
+    marginBottom: 20,
+  },
+  emojisTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 10,
+  },
+  emojisRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+  },
+  emojiSmallButton: {
+    backgroundColor: 'white',
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 10,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: '#ddd',
+  },
+  emojiText: {
+    fontSize: 20,
+  },
+  chatFeatures: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    marginHorizontal: 20,
+    marginBottom: 20,
+  },
+  chatFeature: {
+    alignItems: 'center',
+    backgroundColor: '#f0f7ff',
+    paddingVertical: 10,
+    paddingHorizontal: 15,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#d0e0f0',
+  },
+  chatFeatureIcon: {
+    fontSize: 20,
+    marginBottom: 5,
+  },
+  chatFeatureText: {
+    fontSize: 12,
+    color: '#333',
+    fontWeight: '600',
+  },
+  newsBox: {
+    backgroundColor: '#fff9e6',
+    marginHorizontal: 20,
+    marginBottom: 30,
+    padding: 20,
+    borderRadius: 10,
+    borderWidth: 2,
+    borderColor: '#ffcc00',
+  },
+  newsTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#ff8800',
+    marginBottom: 10,
+  },
+  newsItem: {
+    fontSize: 14,
+    color: '#333',
+    marginBottom: 8,
+    paddingLeft: 10,
+  },
+});
